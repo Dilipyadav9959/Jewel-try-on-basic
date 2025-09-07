@@ -1,279 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Virtual Jewelry Try-On</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeepAR Try-On Prototype</title>
+  <!-- DeepAR Web SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/deepar/js/deepar.js"></script>
   <style>
     body {
-      margin: 0;
-      font-family: "Poppins", sans-serif;
-      background: linear-gradient(135deg, #fdfcfb, #e2d1c3);
+      font-family: sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
       padding: 20px;
+      background: #f4f2f0;
     }
-
-    h2 {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #3b2c20;
-      margin-bottom: 20px;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    }
-
-    #camera-container {
+    #container {
       position: relative;
-      display: inline-block;
-      border-radius: 20px;
+      width: 640px;
+      height: 480px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(15px);
+      margin-bottom: 12px;
     }
-
-    #videoElement {
-      width: 900px;
-      height: 700px;
-      border-radius: 20px;
-      object-fit: cover;
-      background: #222;
-    }
-
-    #necklaceOverlay {
+    #container canvas, #container video {
       position: absolute;
-      pointer-events: none;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
     }
-
-    /* Buttons */
+    .controls {
+      display: flex;
+      gap: 8px;
+    }
     button {
-      margin-top: 15px;
-      padding: 12px 24px;
-      font-size: 16px;
-      border-radius: 12px;
-      cursor: pointer;
+      padding: 8px 14px;
       border: none;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .capture-btn {
-      background: linear-gradient(135deg, #d4af37, #f7e98e);
-      color: #3b2c20;
-    }
-    .capture-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-    }
-
-    .fullview-btn {
-      background: rgba(50, 50, 50, 0.7);
+      border-radius: 6px;
+      background: #4a4a4a;
       color: white;
-      margin-left: 10px;
-      backdrop-filter: blur(10px);
-    }
-    .fullview-btn:hover {
-      background: rgba(30, 30, 30, 0.9);
-    }
-
-    .exit-btn {
-      background: rgba(180, 40, 40, 0.8);
-      color: white;
-      margin-left: 10px;
-      backdrop-filter: blur(10px);
-    }
-
-    /* Catalog */
-    #catalog {
-      margin-top: 30px;
-      background: rgba(255, 255, 255, 0.25);
-      padding: 20px;
-      border-radius: 20px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-      width: fit-content;
-    }
-
-    #catalog h3 {
-      font-size: 1.2rem;
-      color: #3b2c20;
-      margin-bottom: 15px;
-    }
-
-    #catalog button {
-      margin: 5px;
-      padding: 5px;
-      border-radius: 12px;
-      background: white;
-      border: 2px solid transparent;
-      transition: 0.3s ease;
-    }
-
-    #catalog button:hover {
-      border: 2px solid #d4af37;
-      transform: scale(1.05);
-    }
-
-    #catalog img {
-      width: 80px;
-    }
-
-    /* Responsive */
-    @media(max-width: 1000px) {
-      #videoElement {
-        width: 95vw;
-        height: 70vh;
-      }
-    }
-
-    #hiddenCanvas {
-      display: none;
+      cursor: pointer;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h2>✨ Virtual Jewelry Try-On ✨</h2>
 
-  <!-- Camera + Necklace -->
-  <div id="camera-container">
-    <video id="videoElement" autoplay playsinline></video>
-    <img id="necklaceOverlay" src="jewelry/necklace1.png" />
+  <h1>DeepAR Try-On Prototype</h1>
+
+  <div id="container"></div>
+
+  <div class="controls">
+    <button id="screenshotBtn">Capture Screenshot</button>
   </div>
-
-  <!-- Buttons -->
-  <div>
-    <button class="capture-btn" onclick="captureSnapshot()">📸 Capture & Download</button>
-    <button id="toggleFullView" class="fullview-btn" onclick="toggleFullView()">🔍 Full View</button>
-  </div>
-
-  <!-- Jewelry Catalog -->
-  <div id="catalog">
-    <h3>Choose a Necklace</h3>
-    <button onclick="setNecklace('jewelry/necklace1.png')"><img src="jewelry/necklace1.png" /></button>
-    <button onclick="setNecklace('jewelry/necklace2.png')"><img src="jewelry/necklace2.png" /></button>
-    <button onclick="setNecklace('jewelry/necklace3.png')"><img src="jewelry/necklace3.png" /></button>
-  </div>
-
-  <!-- Hidden canvas for snapshot -->
-  <canvas id="hiddenCanvas"></canvas>
-
-  <!-- MediaPipe Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
   <script>
-    const videoElement = document.getElementById("videoElement");
-    const necklaceOverlay = document.getElementById("necklaceOverlay");
-    const hiddenCanvas = document.getElementById("hiddenCanvas");
-    let isFullView = false;
-    let currentNecklace = "jewelry/necklace1.png";
+  (async function() {
+    const licenseKey = 'YOUR_LICENSE_KEY_HERE'; // <-- paste your key
+    const container = document.getElementById('container');
 
-    // Setup FaceMesh
-    const faceMesh = new FaceMesh({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+    // Initialize DeepAR
+    const deepAR = await deepar.initialize({
+      licenseKey,
+      previewElement: container,
+      effect: 'https://cdn.jsdelivr.net/npm/deepar/effects/aviators', // sample effect
     });
 
-    faceMesh.setOptions({
-      maxNumFaces: 1,
-      refineLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
+    // Start video (use front camera)
+    await deepAR.startVideo(true);
 
-    faceMesh.onResults(onResults);
-
-    const camera = new Camera(videoElement, {
-      onFrame: async () => {
-        await faceMesh.send({ image: videoElement });
-      },
-      width: 900,
-      height: 700,
-    });
-    camera.start();
-
-    function onResults(results) {
-      if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-        const landmarks = results.multiFaceLandmarks[0];
-        const chin = landmarks[152];
-        const leftJaw = landmarks[234];
-        const rightJaw = landmarks[454];
-
-        const videoWidth = isFullView ? window.innerWidth : videoElement.offsetWidth;
-        const videoHeight = isFullView ? window.innerHeight : videoElement.offsetHeight;
-
-        const chinX = chin.x * videoWidth;
-        const chinY = chin.y * videoHeight;
-
-        const jawDistance = Math.sqrt(
-          Math.pow(rightJaw.x - leftJaw.x, 2) + Math.pow(rightJaw.y - leftJaw.y, 2)
-        );
-
-        const width = jawDistance * videoWidth * 1.5;
-        const left = chinX - width / 2;
-        const top = chinY;
-
-        necklaceOverlay.style.top = top + "px";
-        necklaceOverlay.style.left = left + "px";
-        necklaceOverlay.style.width = width + "px";
-      }
-    }
-
-    function setNecklace(src) {
-      currentNecklace = src;
-      necklaceOverlay.src = src;
-    }
-
-    function captureSnapshot() {
-      const ctx = hiddenCanvas.getContext("2d");
-      const videoWidth = isFullView ? window.innerWidth : videoElement.offsetWidth;
-      const videoHeight = isFullView ? window.innerHeight : videoElement.offsetHeight;
-
-      hiddenCanvas.width = videoWidth;
-      hiddenCanvas.height = videoHeight;
-
-      ctx.drawImage(videoElement, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
-
-      const img = new Image();
-      img.src = currentNecklace;
-      img.onload = () => {
-        const aspectRatio = img.height / img.width;
-        const drawWidth = parseFloat(necklaceOverlay.style.width);
-        const drawHeight = drawWidth * aspectRatio;
-
-        ctx.drawImage(
-          img,
-          parseFloat(necklaceOverlay.style.left),
-          parseFloat(necklaceOverlay.style.top),
-          drawWidth,
-          drawHeight
-        );
-
-        const link = document.createElement("a");
-        link.download = "jewelry-tryon.png";
-        link.href = hiddenCanvas.toDataURL("image/png");
-        link.click();
-      };
-    }
-
-    function toggleFullView() {
-      isFullView = !isFullView;
-      if (isFullView) {
-        videoElement.style.width = "100vw";
-        videoElement.style.height = "100vh";
-        document.getElementById("toggleFullView").innerText = "↩ Exit Full View";
-        document.getElementById("toggleFullView").className = "exit-btn";
-      } else {
-        videoElement.style.width = "900px";
-        videoElement.style.height = "700px";
-        document.getElementById("toggleFullView").innerText = "🔍 Full View";
-        document.getElementById("toggleFullView").className = "fullview-btn";
-      }
-    }
+    // Screenshot
+    document.getElementById('screenshotBtn').onclick = async () => {
+      const imgData = await deepAR.takeScreenshot();
+      const a = document.createElement('a');
+      a.href = imgData;
+      a.download = 'tryon-screenshot.png';
+      a.click();
+    };
+  })();
   </script>
+
 </body>
 </html>
